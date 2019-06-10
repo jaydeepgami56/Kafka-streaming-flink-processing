@@ -1,0 +1,28 @@
+{
+	"domain_model_category": "ConsumerBehavior",
+	"source_category": "Zipari",
+	"type": "inbound_connector",
+	"application": "connector",
+	"job_id": "Job_123",
+	"results": {
+		"summary": {
+			"total_number_of_test_cases": 4,
+			"total_number_of_passed_test_cases": 3,
+			"total_number_of_failed_test_cases ": 1
+		},
+		"passed": [{
+			"test_case_id": "TS900",
+			"field_name":"zapi_type",
+			"test_category":"warning",
+			"result_file": ""
+		}],
+		"failed": [{
+			"test_case_id": "TS900",
+			"field_name":"zapi_type",
+			"test_category":"warning",
+			"message": "Id is missing",
+			"failure_details":"Sanity log not present",
+			"result_file": "s3://inbound/zipari/result/TS900/*"
+		}]
+	}
+}

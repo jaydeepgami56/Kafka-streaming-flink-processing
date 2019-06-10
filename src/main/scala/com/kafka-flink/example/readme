@@ -1,0 +1,96 @@
+Let us now see how we can use Kafka and Flink together in practice. 
+
+Preparation: Get Kafka and start it locally
+The easiest way to get started with Flink and Kafka is in a local, standalone installation. We later cover issues for moving this into a bare metal or YARN cluster. First, download, install and start a Kafka broker locally. For a more detailed description of these steps, check out the quick start section in the Kafka documentation.
+
+#get kafka
+
+wget http://mirror.softaculous.com/apache/kafka/0.8.2.1/kafka_2.10-0.8.2.1.tgz
+# unpack
+
+tar xf kafka_2.10-0.8.2.1.tgz
+
+cd kafka_2.10-0.8.2.1
+# start zookeeper server
+
+./bin/zookeeper-server-start.sh ./config/zookeeper.properties
+# start broker
+
+./bin/kafka-server-start.sh ./config/server.properties 
+# create topic “test”
+
+ ./bin/kafka-topics.sh --create --topic test --zookeeper localhost:2181 --partitions 1 --replication-factor 1
+# consume from the topic using the console producer
+
+./bin/kafka-console-consumer.sh --topic test --zookeeper localhost:2181
+# produce something into the topic (write something and hit enter)
+
+./bin/kafka-console-producer.sh --topic test --broker-list localhost:9092
+Now, we have a broker and a Zookeeper server running locally and we have verified that reading and writing is properly working.
+
+
+
+
+Flink ships a maven module called “flink-connector-kafka”, which you can add as a dependency to your project to use Flink’s Kafka connector:
+
+<dependency>
+
+   <groupId>org.apache.flink</groupId>
+
+   <artifactId>flink-connector-kafka</artifactId>
+
+   <version>0.9.1</version>
+
+</dependency>
+
+
+Produce data using Flink
+Let us now look on how you can write into a Kafka topic using Flink. We will, as before create a StreamExecutionEnvironment, and a Flink DataStream using a simple String generator.
+
+
+
+then jar file on flink environment 
+./flink run -c jdtest1.producer /home/ec2-user/kafkasetup.jar --topic  testjd --bootstrap.servers localhost:9092
+
+
+Then we will put this DataStream into a Kafka topic. As before, we read the relevant Kafka parameters as command line arguments: 
+
+
+ParameterTool parameterTool = ParameterTool.fromArgs(args);
+
+messageStream.addSink(new KafkaSink < > (parameterTool.getRequired("bootstrap.servers"), parameterTool.getRequired("topic"), new SimpleStringSchema()));
+The command line arguments to pass to the program in order to write the strings to the Kafka console topic we created above are the following;
+
+--topic test --bootstrap.servers localhost:9092
+
+
+Consume data using Flink
+The next step is to subscribe to the topic using Flink’s consumer
+ for consumer side coding is still in progress.
+ but you can acess data using 
+ # consume from the topic using the console producer
+
+bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-beginning
+
+
+First, we look at how to consume data from Kafka using Flink. We will read strings from a topic, do a simple modification, and print them to the standard output. We will use the console producer that is bundled with Kafka. The end result is a program that writes to standard output the content of the standard input. Here is how you can create a Flink DataStream out of a Kafka topic. Note that both the DataStream and topics are distributed, and Flink maps topic partitions to DataStream partitions (here, we are reading the required Kafka parameters from the command line): 
+
+
+StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+ParameterTool parameterTool = ParameterTool.fromArgs(args);
+
+DataStream < String > messageStream = env.addSource(new FlinkKafkaConsumer082 < > (parameterTool.getRequired("topic"), new SimpleStringSchema(), parameterTool.getProperties()));
+Once a DataStream is created, you can transform it as you like. For example, let us pad every word with a fixed prefix, and print to stdout: 
+
+
+messageStream .rebalance() .map ( s -&amp;gt; “Kafka and Flink says: ” + s) .print();
+The call to rebalance() causes data to be re-partitioned so that all machines receive messages (for example, when the number of Kafka partitions is fewer than the number of Flink parallel instances). The full code can be found here. The command-line arguments to pass to this Flink program in order to read from the Kafka topic “test” that we have created before are the following:
+
+--topic test --bootstrap.servers localhost:9092 --zookeeper.connect localhost:2181 --group.id myGroup
+Since we are reading from the console producer, and printing to the standard output, the program will simply print the strings you write in the console. These strings should appear almost instantly.
+
+
+for more information use below link:
+
+https://www.ververica.com/blog/kafka-flink-a-practical-how-to
